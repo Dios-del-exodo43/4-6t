@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Фільмова база</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #a1a1a1;
+        }
+        
+        .header {
+            background-color: #111;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 10px 20px;
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .filters input,
+        .filters select {
+            padding: 8px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            flex: 1;
+            min-width: 180px;
+        }
+        
+        .movies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        .movie-card {
+            background: rgb(221, 221, 221);
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .movie-card:hover {
+            transform: scale(1.03);
+        }
+        
+        .poster {
+            width: 100%;
+            height: 320px;
+            object-fit: cover;
+        }
+        
+        .movie-info {
+            padding: 10px 15px;
+        }
+        
+        .movie-info h3 {
+            margin: 10px 0 5px;
+            font-size: 18px;
+        }
+        
+        .movie-info p {
+            margin: 4px 0;
+            color: #555;
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .modal-content {
+            background: rgb(73, 73, 73);
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 600px;
+            width: 90%;
+            position: relative;
+        }
+        
+        .modal-content img {
+            max-width: 100%;
+            border-radius: 8px;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>Фільмова база</h1>
+    </div>
+
+    <div class="filters">
+        <input type="text" id="searchInput" placeholder="Пошук за назвою...">
+        <select id="genreFilter">
+      <option value="">Усі жанри</option>
+    </select>
+        <select id="statusFilter">
+      <option value="">Усі статуси</option>
+    </select>
+    </div>
+
+    <div id="moviesContainer" class="movies-grid"></div>
+
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const container = document.getElementById("moviesContainer");
+        const searchInput = document.getElementById("searchInput");
+        const genreFilter = document.getElementById("genreFilter");
+        const statusFilter = document.getElementById("statusFilter");
+        const modal = document.getElementById("modal");
+        const modalBody = document.getElementById("modalBody");
+
+        let allShows = [];
+
+        async function fetchShows() {
+            const response = await fetch("https://api.tvmaze.com/shows");
+            const shows = await response.json();
+            allShows = shows.slice(0, 50);
+            populateFilters(allShows);
+            renderShows(allShows);
+        }
+
+        function populateFilters(shows) {
+            const genres = new Set();
+            const statuses = new Set();
+
+            shows.forEach(show => {
+                show.genres.forEach(g => genres.add(g));
+                statuses.add(show.status);
+            });
+
+            genres.forEach(g => {
+                genreFilter.innerHTML += `<option value="${g}">${g}</option>`;
+            });
+
+            statuses.forEach(s => {
+                statusFilter.innerHTML += `<option value="${s}">${s}</option>`;
+            });
+        }
+
+        function renderShows(shows) {
+            container.innerHTML = "";
+
+            const filtered = shows.filter(show => {
+                const nameMatch = show.name.toLowerCase().includes(searchInput.value.toLowerCase());
+                const genreMatch = !genreFilter.value || show.genres.includes(genreFilter.value);
+                const statusMatch = !statusFilter.value || show.status === statusFilter.value;
+                return nameMatch && genreMatch && statusMatch;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = "<p>Нічого не знайдено.</p>";
+                return;
+            }
+
+            filtered.forEach(show => {
+                const card = document.createElement("div");
+                card.className = "movie-card";
+                card.onclick = () => openModal(show);
+
+                card.innerHTML = `
+          <img src="${show.image?.medium || ''}" alt="${show.name}" class="poster"/>
+          <div class="movie-info">
+            <h3>${show.name}</h3>
+            <p><strong>Жанр:</strong> ${show.genres.join(", ") || "Невідомо"}</p>
+            <p><strong>Статус:</strong> ${show.status}</p>
+          </div>
+        `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function openModal(show) {
+            modalBody.innerHTML = `
+        <h2>${show.name}</h2>
+        <img src="${show.image?.original || ''}" alt="${show.name}" />
+        <p><strong>Жанри:</strong> ${show.genres.join(", ") || "Невідомо"}</p>
+        <p><strong>Статус:</strong> ${show.status}</p>
+        <p><strong>Прем'єра:</strong> ${show.premiered || "Невідомо"}</p>
+        <p><strong>Опис:</strong> ${show.summary || "Без опису"}</p>
+      `;
+            modal.style.display = "flex";
+        }
+
+        function closeModal() {
+            modal.style.display = "none";
+        }
+
+        searchInput.addEventListener("input", () => renderShows(allShows));
+        genreFilter.addEventListener("change", () => renderShows(allShows));
+        statusFilter.addEventListener("change", () => renderShows(allShows));
+
+        fetchShows();
+    </script>
+</body>
+
+</html>
