@@ -19,13 +19,22 @@ document.addEventListener("DOMContentLoaded", () => {
             populateFilters(allShows);
             renderShows(allShows);
         } catch (error) {
-            console.error("Помилка при отриманні даних:", error);
+            console.error("Помилка при отриманні даних", error);
         }
     }
 
+
+
+
+
+
+
+
+
+ //функція для заповнення фільтрів
     function populateFilters(shows) {
-        const genres = new Set();
-        const statuses = new Set();
+        const genres = new Set(); //Кколекція для зберігання жанрів
+        const statuses = new Set(); ///////////////////////////////
 
         shows.forEach(show => {
             show.genres.forEach(g => genres.add(g));
@@ -41,6 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+// функція для відображення на сторінці
     function renderShows(shows) {
         container.innerHTML = "";
 
@@ -53,10 +63,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (filtered.length === 0) {
             container.innerHTML = "<p>Нічого не знайдено.</p>";
-            return;
+            return;/////Якщо результатів немає - виводимо повідомлення і виходимо з функції
         }
-
-        filtered.forEach(show => {
+        filtered.forEach(show => { //////створення картків для  фільмів
             const card = document.createElement("div");
             card.className = "movie-card";
             card.onclick = () => openModal(show);
@@ -69,11 +78,20 @@ document.addEventListener("DOMContentLoaded", () => {
           <p><strong>Статус:</strong> ${show.status}</p>
         </div>
       `;
-
-            container.appendChild(card);
+            container.appendChild(card);//додає елемент до DOM
         });
     }
 
+
+
+
+
+
+
+
+
+
+//відкриває модальне вікно  з інформіцією про фільм
     function openModal(show) {
         modalBody.innerHTML = `
       <h2>${show.name}</h2>
@@ -83,17 +101,17 @@ document.addEventListener("DOMContentLoaded", () => {
       <p><strong>Прем'єра:</strong> ${show.premiered || "Невідомо"}</p>
       <p><strong>Опис:</strong> ${show.summary || "Без опису"}</p>
     `;
-        modal.style.display = "flex";
+        modal.style.display = "flex";//Робить модальне вікно видимим
     }
-
+//Закриває модальне вікно
     function closeModal() {
         modal.style.display = "none";
     }
-
+//Обробники подій
     searchInput.addEventListener("input", () => renderShows(allShows));
     genreFilter.addEventListener("change", () => renderShows(allShows));
     statusFilter.addEventListener("change", () => renderShows(allShows));
     closeBtn.addEventListener("click", closeModal);
 
-    fetchShows();
+    fetchShows();////Викликає початкове завантаження даних з API
 });
