@@ -1,23 +1,99 @@
-const container = document.getElementById("moviesContainer");
+"use strict";
 
-function renderShows(shows) {
-    container.innerHTML = "";
+document.addEventListener("DOMContentLoaded", () => {
+    const container = document.getElementById("moviesContainer");
+    const searchInput = document.getElementById("searchInput");
+    const genreFilter = document.getElementById("genreFilter");
+    const statusFilter = document.getElementById("statusFilter");
+    const modal = document.getElementById("modal");
+    const modalBody = document.getElementById("modalBody");
+    const closeBtn = document.getElementById("closeBtn");
 
-    shows.forEach(show => {
-        const card = document.createElement("div");
-        card.className = "movie-card";
+    let allShows = [];
 
-        card.innerHTML = `
-      <img src="${show.image?.medium || ''}" alt="${show.name}" class="poster"/>
-      <div class="movie-info">
-        <h3>${show.name}</h3>
-        <p><strong>Жанр:</strong> ${show.genres.join(", ") || "Невідомо"}</p>
-        <p><strong>Статус:</strong> ${show.status}</p>
-      </div>
+    async function fetchShows() {
+        try {
+            const response = await fetch("https://api.tvmaze.com/shows");
+            const shows = await response.json();
+            allShows = shows.slice(0, 50);
+            populateFilters(allShows);
+            renderShows(allShows);
+        } catch (error) {
+            console.error("Помилка при отриманні даних:", error);
+        }
+    }
+
+    function populateFilters(shows) {
+        const genres = new Set();
+        const statuses = new Set();
+
+        shows.forEach(show => {
+            show.genres.forEach(g => genres.add(g));
+            statuses.add(show.status);
+        });
+
+        genres.forEach(g => {
+            genreFilter.innerHTML += `<option value="${g}">${g}</option>`;
+        });
+
+        statuses.forEach(s => {
+            statusFilter.innerHTML += `<option value="${s}">${s}</option>`;
+        });
+    }
+
+    function renderShows(shows) {
+        container.innerHTML = "";
+
+        const filtered = shows.filter(show => {
+            const nameMatch = show.name.toLowerCase().includes(searchInput.value.toLowerCase());
+            const genreMatch = !genreFilter.value || show.genres.includes(genreFilter.value);
+            const statusMatch = !statusFilter.value || show.status === statusFilter.value;
+            return nameMatch && genreMatch && statusMatch;
+        });
+
+        if (filtered.length === 0) {
+            container.innerHTML = "<p>Нічого не знайдено.</p>";
+            return;
+        }
+
+        filtered.forEach(show => {
+            const card = document.createElement("div");
+            card.className = "movie-card";
+            card.onclick = () => openModal(show);
+
+            card.innerHTML = `
+        <img src="${show.image?.medium || ''}" alt="${show.name}" class="poster"/>
+        <div class="movie-info">
+          <h3>${show.name}</h3>
+          <p><strong>Жанр:</strong> ${show.genres.join(", ") || "Невідомо"}</p>
+          <p><strong>Статус:</strong> ${show.status}</p>
+        </div>
+      `;
+
+            container.appendChild(card);
+        });
+    }
+
+    function openModal(show) {
+        modalBody.innerHTML = `
+      <h2>${show.name}</h2>
+      <img src="${show.image?.original || ''}" alt="${show.name}" />
+      <p><strong>Жанри:</strong> ${show.genres.join(", ") || "Невідомо"}</p>
+      <p><strong>Статус:</strong> ${show.status}</p>
+      <p><strong>Прем'єра:</strong> ${show.premiered || "Невідомо"}</p>
+      <p><strong>Опис:</strong> ${show.summary || "Без опису"}</p>
     `;
+        modal.style.display = "flex";
+    }
 
-        container.appendChild(card);
-    });
-}
+    function closeModal() {
+        modal.style.display = "none";
+    }
 
-fetchShows().then(renderShows);
+    searchInput.addEventListener("input", () => renderShows(allShows));
+    genreFilter.addEventListener("change", () => renderShows(allShows));
+    statusFilter.addEventListener("change", () => renderShows(allShows));
+    closeBtn.addEventListener("click", closeModal);
+
+    fetchShows();
+});
